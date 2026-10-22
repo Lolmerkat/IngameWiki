@@ -1,0 +1,59 @@
+name: Release
+
+# Publishes a GitHub release whenever the `version` in gradle.properties changes on main.
+# Can also be started by hand from the Actions tab.
+on:
+  push:
+    branches: [main]
+    paths: [gradle.properties]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check version
+        id: version
+        run: |
+          version=$(grep -E '^version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "Tag v$version already exists, skipping release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: gradle/actions/wrapper-validation@v4
+        if: steps.version.outputs.release == 'true'
+
+      - uses: actions/setup-java@v4
+        if: steps.version.outputs.release == 'true'
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.version.outputs.release == 'true'
+
+      - name: Build
+        if: steps.version.outputs.release == 'true'
+        run: ./gradlew build
+
+      - name: Create release
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" build/libs/*.jar \
+            --target "$GITHUB_SHA" \
+            --title "IngameWiki $VERSION" \
+            --generate-notes
