@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "ingamewiki",
+	"version": "${version}",
+	"name": "Ingame Wiki",
+	"description": "Look up Minecraft Wiki pages for blocks, items and entities and read them in-game, in your browser or in an embedded Chromium (MCEF).",
+	"authors": ["Jan"],
+	"contact": {
+		"homepage": "https://minecraft.wiki/"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.jan.ingamewiki.IngameWiki"],
+		"modmenu": ["dev.jan.ingamewiki.ModMenuIntegration"]
+	},
+	"mixins": ["ingamewiki.mixins.json"],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*",
+		"mcef-modern": "*"
+	}
+}

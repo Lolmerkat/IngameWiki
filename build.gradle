@@ -1,0 +1,84 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = 'ingamewiki'
+}
+
+repositories {
+	mavenCentral()
+	maven {
+		name = 'TerraformersMC'
+		url = 'https://maven.terraformersmc.com/releases/'
+	}
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'Modrinth'
+				url = 'https://api.modrinth.com/maven'
+			}
+		}
+		filter {
+			includeGroup 'maven.modrinth'
+		}
+	}
+}
+
+loom {
+	mods {
+		"ingamewiki" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// HTML parser for the in-game renderer, bundled into the mod jar.
+	include(implementation("org.jsoup:jsoup:${project.jsoup_version}"))
+
+	// Optional: adds a config button to the Mod Menu mod list.
+	compileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") { transitive = false }
+	localRuntime("com.terraformersmc:modmenu:${project.modmenu_version}") { transitive = false }
+
+	// Optional: MCEF Modern provides the embedded Chromium browser for the "MCEF" open mode.
+	compileOnly("maven.modrinth:mcef-modern:${project.mcef_modern_version}") { transitive = false }
+	compileOnly("me.friwi:jcef-api:${project.jcef_api_version}") { transitive = false }
+	// MCEF downloads Chromium (~150 MB) on first use, so it is only added to the dev client on request:
+	// ./gradlew runClient -Pmcef
+	if (project.hasProperty('mcef')) {
+		localRuntime("maven.modrinth:mcef-modern:${project.mcef_modern_version}") { transitive = false }
+	}
+
+	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+test {
+	useJUnitPlatform()
+}
