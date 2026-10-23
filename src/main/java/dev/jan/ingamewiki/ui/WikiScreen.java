@@ -794,18 +794,18 @@ public final class WikiScreen extends Screen {
 			setFocused(null);
 		}
 		int button = event.button();
-		if (button == 3) {
+		if (button == InputConstants.MOUSE_BUTTON_4) {
 			goBack();
 			return true;
 		}
-		if (button == 4) {
+		if (button == InputConstants.MOUSE_BUTTON_5) {
 			goForward();
 			return true;
 		}
 		double mx = event.x();
 		double my = event.y();
 		int sx = panelRight() - SCROLLBAR;
-		if (button == 0 && mx >= sx && mx < panelRight() && my >= panelTop() && my < panelBottom() && maxScroll() > 0) {
+		if (button == InputConstants.MOUSE_BUTTON_LEFT && mx >= sx && mx < panelRight() && my >= panelTop() && my < panelBottom() && maxScroll() > 0) {
 			draggingScrollbar = true;
 			dragScrollbar(my);
 			return true;
@@ -817,11 +817,11 @@ public final class WikiScreen extends Screen {
 			}
 			return true;
 		}
-		if ((button == 0 || button == 2) && layout != null) {
+		if ((button == InputConstants.MOUSE_BUTTON_LEFT || button == InputConstants.MOUSE_BUTTON_MIDDLE) && layout != null) {
 			Piece piece = pieceAt((int) mx, (int) my);
 			Link link = piece instanceof Piece.Text t ? t.link() : piece instanceof Piece.Image i ? i.link() : null;
 			if (link != null) {
-				follow(link, button == 2 || event.hasControlDown());
+				follow(link, button == InputConstants.MOUSE_BUTTON_MIDDLE || event.hasControlDown());
 				return true;
 			}
 		}
