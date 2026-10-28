@@ -9,6 +9,7 @@
 		"homepage": "https://minecraft.wiki/"
 	},
 	"license": "MIT",
+	"icon": "assets/ingamewiki/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": ["dev.jan.ingamewiki.IngameWiki"],
