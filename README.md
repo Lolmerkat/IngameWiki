@@ -29,7 +29,9 @@ opens the current page in-game.
 
 ## The in-game viewer
 - Back/forward buttons, mouse buttons 4/5, Alt+←/→ or Backspace
-- Search box (Ctrl+F or Ctrl+L): opens the page with that name, or lists search results
+- Search box (Ctrl+L): opens the page with that name, or lists search results
+- Find on page (Ctrl+F): highlights matches as you type. Enter, F3 or Ctrl+G jumps to the next match, with Shift to
+  the previous one; Escape closes it.
 - Bookmarks: ☆ (or Ctrl+D) bookmarks the current page, ☰ (or Ctrl+B) lists your bookmarks, where "(remove)"
   deletes one. Bookmarks are kept per wiki URL in `config/ingamewiki-data.json`.
 - Click a link to follow it. Middle-click or Ctrl+click opens it in the browser instead.

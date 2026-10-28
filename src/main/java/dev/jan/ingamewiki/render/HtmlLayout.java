@@ -188,7 +188,9 @@ public final class HtmlLayout {
 				Link l = link(el);
 				if (l != null) {
 					link = l;
-					style = style.withColor(l.missing() ? MISSING_LINK_COLOR : LINK_COLOR);
+					if (!el.hasClass(ImplicitLinks.CLASS)) {
+						style = style.withColor(l.missing() ? MISSING_LINK_COLOR : LINK_COLOR);
+					}
 				}
 				walkChildren(el, style, link);
 				return;

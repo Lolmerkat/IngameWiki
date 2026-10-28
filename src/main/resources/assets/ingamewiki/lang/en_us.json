@@ -17,6 +17,9 @@
 	"ingamewiki.opened.browser": "Opened %s in your browser",
 
 	"ingamewiki.search": "Search the wiki…",
+	"ingamewiki.find": "Find on page…",
+	"ingamewiki.find.count": "%s/%s",
+	"ingamewiki.find.none": "No matches",
 	"ingamewiki.back": "Back",
 	"ingamewiki.forward": "Forward",
 	"ingamewiki.home": "Main page",

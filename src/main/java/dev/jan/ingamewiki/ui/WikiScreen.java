@@ -7,8 +7,10 @@ import dev.jan.ingamewiki.config.ModConfig;
 import dev.jan.ingamewiki.config.OpenMode;
 import dev.jan.ingamewiki.config.WikiData;
 import dev.jan.ingamewiki.mcef.McefSupport;
+import dev.jan.ingamewiki.render.FindInPage;
 import dev.jan.ingamewiki.render.HtmlLayout;
 import dev.jan.ingamewiki.render.ImageCache;
+import dev.jan.ingamewiki.render.ImplicitLinks;
 import dev.jan.ingamewiki.render.LayoutOptions;
 import dev.jan.ingamewiki.render.Link;
 import dev.jan.ingamewiki.render.PageLayout;
@@ -40,6 +42,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import org.jsoup.Jsoup;
@@ -59,6 +62,9 @@ public final class WikiScreen extends Screen {
 	private static final int MAX_TEXT_WIDTH = 900;
 	private static final int SCROLL_STEP = 30;
 	private static final int PANEL_COLOR = 0xD0141414;
+	private static final int FIND_WIDTH = 150;
+	private static final int FIND_COLOR = 0x70E0B000;
+	private static final int FIND_CURRENT_COLOR = 0xC0FF8C00;
 	private static final int CACHE_SIZE = 24;
 	private static final float[] ZOOM_STEPS = {0.5F, 0.75F, 1.0F, 1.25F, 1.5F, 1.75F, 2.0F, 2.5F, 3.0F};
 
@@ -121,6 +127,13 @@ public final class WikiScreen extends Screen {
 	private @Nullable Button modeButton;
 	private @Nullable Button zoomButton;
 	private @Nullable Button bookmarkButton;
+	/**
+	 * Find-in-page box; not a renderable widget because it is drawn on top of the page.
+	 */
+	private @Nullable EditBox findBox;
+	private boolean finding;
+	private List<FindInPage.Hit> hits = List.of();
+	private int hitIndex;
 
 	public WikiScreen(@Nullable Screen parent, WikiRequest request) {
 		super(Component.translatable("ingamewiki.title"));
@@ -218,6 +231,17 @@ public final class WikiScreen extends Screen {
 		} else if (page != null) {
 			search.setValue(page.displayTitle());
 		}
+		String previousFind = findBox == null ? null : findBox.getValue();
+		findBox = addWidget(new EditBox(font, panelRight() - SCROLLBAR - FIND_WIDTH - 2, panelTop() + 2, FIND_WIDTH, 16,
+				Component.translatable("ingamewiki.find")));
+		findBox.setMaxLength(256);
+		findBox.setHint(Component.translatable("ingamewiki.find").withStyle(EditBox.SEARCH_HINT_STYLE));
+		if (previousFind != null) {
+			findBox.setValue(previousFind);
+		}
+		findBox.setResponder(value -> updateFind(true));
+		findBox.visible = finding;
+		findBox.active = finding;
 		updateButtons();
 
 		if (!started) {
@@ -425,6 +449,7 @@ public final class WikiScreen extends Screen {
 		page = loaded;
 		message = null;
 		layout = null;
+		hitIndex = 0;
 		relayout();
 		if (entry.restoreScroll) {
 			entry.restoreScroll = false;
@@ -470,7 +495,9 @@ public final class WikiScreen extends Screen {
 
 	private static Loaded article(WikiPage result, WikiLinks links) {
 		String html = "<h1>" + Entities.escape(result.displayTitle()) + "</h1>" + result.html();
-		return new Loaded(result.title(), result.displayTitle(), parse(html, links), result.fragment(),
+		Document document = parse(html, links);
+		ImplicitLinks.apply(document.body(), links, result.title());
+		return new Loaded(result.title(), result.displayTitle(), document, result.fragment(),
 				links.page(result.title(), result.fragment()), links.base());
 	}
 
@@ -555,6 +582,131 @@ public final class WikiScreen extends Screen {
 		zoom = newZoom;
 		IngameWiki.LOGGER.debug("Laid out {} in {} ms ({} pieces)", page.displayTitle(), (System.nanoTime() - start) / 1_000_000, layout.pieces().size());
 		scroll = Mth.clamp(ratio * maxScroll(), 0, maxScroll());
+		updateFind(false);
+	}
+
+	// ---------------------------------------------------------------- find in page
+
+	private void openFind() {
+		if (findBox == null) {
+			return;
+		}
+		finding = true;
+		findBox.visible = true;
+		findBox.active = true;
+		setFocused(findBox);
+		findBox.moveCursorToEnd(false);
+		findBox.moveCursorToStart(true);
+		updateFind(true);
+	}
+
+	private void closeFind() {
+		finding = false;
+		hits = List.of();
+		if (findBox != null) {
+			findBox.visible = false;
+			findBox.active = false;
+			if (getFocused() == findBox) {
+				setFocused(null);
+			}
+		}
+	}
+
+	/**
+	 * Searches the current layout again.
+	 *
+	 * @param jump select the first match from the top of the view and scroll to it, as when the query changes
+	 */
+	private void updateFind(boolean jump) {
+		if (!finding || findBox == null || layout == null) {
+			hits = List.of();
+			return;
+		}
+		hits = FindInPage.find(layout.pieces(), findBox.getValue());
+		if (hits.isEmpty()) {
+			hitIndex = 0;
+			return;
+		}
+		if (jump) {
+			hitIndex = 0;
+			for (int i = 0; i < hits.size(); i++) {
+				if (hits.get(i).y() * zoom >= scroll) {
+					hitIndex = i;
+					break;
+				}
+			}
+			scrollToHit();
+		} else {
+			hitIndex = Math.min(hitIndex, hits.size() - 1);
+		}
+	}
+
+	private void stepFind(int direction) {
+		if (hits.isEmpty()) {
+			return;
+		}
+		hitIndex = Math.floorMod(hitIndex + direction, hits.size());
+		scrollToHit();
+	}
+
+	private void scrollToHit() {
+		FindInPage.Hit hit = hits.get(hitIndex);
+		double top = hit.y() * zoom;
+		double bottom = hit.bottom() * zoom;
+		// Keep clear of the find box at the top of the panel.
+		if (top < scroll + 20 || bottom > scroll + viewHeight() - 2 * PAD) {
+			scroll = Mth.clamp(top - viewHeight() / 3.0, 0, maxScroll());
+		}
+	}
+
+	/**
+	 * Highlights the visible matches, in layout coordinates.
+	 */
+	private void drawHits(GuiGraphicsExtractor graphics, int top, int bottom) {
+		int oy = originY();
+		for (int i = 0; i < hits.size(); i++) {
+			FindInPage.Hit hit = hits.get(i);
+			if (hit.bottom() * zoom + oy < top || hit.y() * zoom + oy > bottom) {
+				continue;
+			}
+			int color = i == hitIndex ? FIND_CURRENT_COLOR : FIND_COLOR;
+			for (FindInPage.Segment segment : hit.segments()) {
+				Piece.Text t = segment.piece();
+				String text = t.text().getString();
+				int x0 = t.x() + Math.round(font.width(FormattedText.of(text.substring(0, segment.from()), t.text().getStyle())) * t.scale());
+				int x1 = t.x() + Math.round(font.width(FormattedText.of(text.substring(0, segment.to()), t.text().getStyle())) * t.scale());
+				graphics.fill(x0, t.y() - 1, x1, t.bottom(), color);
+			}
+		}
+	}
+
+	private void drawFindBar(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+		if (findBox == null) {
+			return;
+		}
+		String label;
+		int color = 0xFFB0B0B0;
+		if (findBox.getValue().isBlank()) {
+			label = "";
+		} else if (hits.isEmpty()) {
+			label = Component.translatable("ingamewiki.find.none").getString();
+			color = 0xFFFF7070;
+		} else {
+			label = Component.translatable("ingamewiki.find.count", hitIndex + 1, hits.size()).getString();
+		}
+		int x = findBox.getX();
+		int y = findBox.getY();
+		int labelWidth = label.isEmpty() ? 0 : font.width(label) + 8;
+		graphics.fill(x - labelWidth - 2, y - 2, x + findBox.getWidth() + 2, y + findBox.getHeight() + 2, 0xF0101010);
+		if (!label.isEmpty()) {
+			graphics.text(font, label, x - labelWidth + 2, y + 4, color, false);
+		}
+		findBox.extractRenderState(graphics, mouseX, mouseY, a);
+	}
+
+	private boolean overFindBar(double mouseX, double mouseY) {
+		return finding && findBox != null && mouseX >= findBox.getX() - 60 && mouseX < findBox.getX() + findBox.getWidth() + 2
+				&& mouseY >= findBox.getY() - 2 && mouseY < findBox.getY() + findBox.getHeight() + 2;
 	}
 
 	private void scrollTo(String fragment) {
@@ -640,10 +792,13 @@ public final class WikiScreen extends Screen {
 				graphics.centeredText(font, line, (left + right) / 2, y, messageIsError ? 0xFFFF7070 : 0xFFA0A0A0);
 				y += 10;
 			}
+			if (finding) {
+				drawFindBar(graphics, mouseX, mouseY, a);
+			}
 			return;
 		}
 
-		boolean inPanel = mouseX >= left && mouseX < right - SCROLLBAR && mouseY >= top && mouseY < bottom;
+		boolean inPanel = mouseX >= left && mouseX < right - SCROLLBAR && mouseY >= top && mouseY < bottom && !overFindBar(mouseX, mouseY);
 		hoveredLink = null;
 		Piece hovered = inPanel ? pieceAt(mouseX, mouseY) : null;
 		if (hovered instanceof Piece.Text t) {
@@ -659,6 +814,9 @@ public final class WikiScreen extends Screen {
 			graphics.setTooltipForNextFrame(font, Component.literal(i.tooltip()), mouseX, mouseY);
 		}
 		drawScrollbar(graphics, right - SCROLLBAR, top, bottom);
+		if (finding) {
+			drawFindBar(graphics, mouseX, mouseY, a);
+		}
 		if (tocVisible()) {
 			drawToc(graphics, mouseX, mouseY);
 		}
@@ -684,6 +842,7 @@ public final class WikiScreen extends Screen {
 		graphics.pose().pushMatrix();
 		graphics.pose().translate(ox, oy);
 		graphics.pose().scale(zoom, zoom);
+		drawHits(graphics, top, bottom);
 		for (Piece piece : layout.pieces()) {
 			if (piece.bottom() * zoom + oy < top || piece.top() * zoom + oy > bottom) {
 				continue;
@@ -790,7 +949,7 @@ public final class WikiScreen extends Screen {
 		if (super.mouseClicked(event, doubleClick)) {
 			return true;
 		}
-		if (search != null && search.isFocused()) {
+		if (getFocused() instanceof EditBox) {
 			setFocused(null);
 		}
 		int button = event.button();
@@ -817,7 +976,7 @@ public final class WikiScreen extends Screen {
 			}
 			return true;
 		}
-		if ((button == InputConstants.MOUSE_BUTTON_LEFT || button == InputConstants.MOUSE_BUTTON_MIDDLE) && layout != null) {
+		if ((button == InputConstants.MOUSE_BUTTON_LEFT || button == InputConstants.MOUSE_BUTTON_MIDDLE) && layout != null && !overFindBar(mx, my)) {
 			Piece piece = pieceAt((int) mx, (int) my);
 			Link link = piece instanceof Piece.Text t ? t.link() : piece instanceof Piece.Image i ? i.link() : null;
 			if (link != null) {
@@ -869,6 +1028,30 @@ public final class WikiScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (event.key() == InputConstants.KEY_F && event.hasControlDown()) {
+			openFind();
+			return true;
+		}
+		boolean findNext = event.key() == InputConstants.KEY_F3 || event.key() == InputConstants.KEY_G && event.hasControlDown();
+		if (finding && findBox != null && findBox.isFocused()) {
+			if (event.isConfirmation() || findNext) {
+				stepFind(event.hasShiftDown() ? -1 : 1);
+				return true;
+			}
+			if (event.isEscape()) {
+				closeFind();
+				return true;
+			}
+			return super.keyPressed(event);
+		}
+		if (finding && findNext) {
+			stepFind(event.hasShiftDown() ? -1 : 1);
+			return true;
+		}
+		if (finding && event.isEscape() && (search == null || !search.isFocused())) {
+			closeFind();
+			return true;
+		}
 		if (search != null && search.isFocused()) {
 			if (event.isConfirmation()) {
 				String query = search.getValue().strip();
@@ -927,7 +1110,7 @@ public final class WikiScreen extends Screen {
 					openBookmarks();
 				}
 			}
-			case InputConstants.KEY_F, InputConstants.KEY_L -> {
+			case InputConstants.KEY_L -> {
 				if (!event.hasControlDown() || search == null) {
 					return super.keyPressed(event);
 				}
