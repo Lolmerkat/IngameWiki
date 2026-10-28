@@ -5,9 +5,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
+import dev.jan.qollib.http.Futures;
+import dev.jan.qollib.http.ModHttp;
 import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -26,15 +25,11 @@ import org.jspecify.annotations.Nullable;
 public final class WikiClient {
 	private static final Duration TIMEOUT = Duration.ofSeconds(20);
 
-	private final HttpClient http = HttpClient.newBuilder()
-			.followRedirects(HttpClient.Redirect.NORMAL)
-			.connectTimeout(Duration.ofSeconds(10))
-			.build();
-	private final String userAgent;
+	private final ModHttp http;
 	private volatile WikiLinks links;
 
 	public WikiClient(String userAgent, WikiLinks links) {
-		this.userAgent = userAgent;
+		this.http = new ModHttp(userAgent, TIMEOUT);
 		this.links = links;
 	}
 
@@ -126,7 +121,7 @@ public final class WikiClient {
 	 */
 	public CompletableFuture<WikiPage> lookup(String query) {
 		return page(query).exceptionallyCompose(error -> {
-			if (!(unwrap(error) instanceof WikiException.Missing)) {
+			if (!(Futures.unwrap(error) instanceof WikiException.Missing)) {
 				return CompletableFuture.failedFuture(error);
 			}
 			return search(query, 1).thenCompose(results -> {
@@ -144,32 +139,13 @@ public final class WikiClient {
 	}
 
 	public CompletableFuture<byte[]> bytes(URI uri) {
-		HttpRequest request = HttpRequest.newBuilder(uri)
-				.timeout(TIMEOUT)
-				.header("User-Agent", userAgent)
-				.GET()
-				.build();
-		return http.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()).thenApply(response -> {
-			if (response.statusCode() != 200) {
-				throw new WikiException("HTTP " + response.statusCode() + " for " + uri);
-			}
-			return response.body();
-		});
+		return http.getBytes(uri);
 	}
 
 	private CompletableFuture<JsonObject> api(Map<String, String> params) {
-		StringBuilder query = new StringBuilder("format=json&formatversion=2&maxlag=5");
-		for (Map.Entry<String, String> e : params.entrySet()) {
-			query.append('&').append(e.getKey()).append('=').append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
-		}
-		URI uri = URI.create(links.api() + "?" + query);
-		HttpRequest request = HttpRequest.newBuilder(uri)
-				.timeout(TIMEOUT)
-				.header("User-Agent", userAgent)
-				.header("Accept", "application/json")
-				.GET()
-				.build();
-		return http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(response -> {
+		URI uri = URI.create(links.api() + "?format=json&formatversion=2&maxlag=5&" + ModHttp.form(params));
+		HttpRequest request = http.request(uri).header("Accept", "application/json").build();
+		return http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(response -> {
 			if (response.statusCode() != 200) {
 				throw new WikiException("HTTP " + response.statusCode());
 			}
@@ -179,14 +155,6 @@ public final class WikiClient {
 				throw new WikiException("Invalid response", e);
 			}
 		});
-	}
-
-	public static Throwable unwrap(Throwable error) {
-		Throwable cause = error;
-		while (cause instanceof CompletionException && cause.getCause() != null) {
-			cause = cause.getCause();
-		}
-		return cause;
 	}
 
 	private static @Nullable JsonObject object(JsonObject json, String key) {

@@ -31,6 +31,12 @@ jobs:
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - uses: actions/checkout@v4
+        if: steps.version.outputs.release == 'true'
+        with:
+          repository: ${{ github.repository_owner }}/QOLLib
+          path: QOLLib
+
       - uses: gradle/actions/wrapper-validation@v4
         if: steps.version.outputs.release == 'true'
 
@@ -45,7 +51,7 @@ jobs:
 
       - name: Build
         if: steps.version.outputs.release == 'true'
-        run: ./gradlew build
+        run: ./gradlew build -Pqollib.dir=QOLLib
 
       - name: Create release
         if: steps.version.outputs.release == 'true'

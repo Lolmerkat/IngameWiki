@@ -14,12 +14,12 @@
 		"client": ["dev.jan.ingamewiki.IngameWiki"],
 		"modmenu": ["dev.jan.ingamewiki.ModMenuIntegration"]
 	},
-	"mixins": ["ingamewiki.mixins.json"],
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"minecraft": "~26.3",
 		"java": ">=25",
-		"fabric-api": "*"
+		"fabric-api": "*",
+		"qollib": ">=1.0.0"
 	},
 	"suggests": {
 		"modmenu": "*",

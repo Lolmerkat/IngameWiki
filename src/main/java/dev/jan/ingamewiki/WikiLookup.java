@@ -2,20 +2,15 @@ package dev.jan.ingamewiki;
 
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.language.ClientLanguage;
 import net.minecraft.locale.Language;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import dev.jan.ingamewiki.mixin.AbstractContainerScreenAccessor;
 import dev.jan.ingamewiki.wiki.WikiLinks;
 import org.jspecify.annotations.Nullable;
 
@@ -27,17 +22,6 @@ public final class WikiLookup {
 	private static @Nullable Language english;
 
 	private WikiLookup() {
-	}
-
-	/**
-	 * The item under the mouse in an inventory screen, or {@code null}.
-	 */
-	public static @Nullable String hoveredItem(Screen screen) {
-		if (!(screen instanceof AbstractContainerScreen<?>) || screen.getFocused() instanceof EditBox) {
-			return null;
-		}
-		Slot slot = ((AbstractContainerScreenAccessor) screen).ingamewiki$getHoveredSlot();
-		return slot != null && slot.hasItem() ? itemName(slot.getItem()) : null;
 	}
 
 	/**

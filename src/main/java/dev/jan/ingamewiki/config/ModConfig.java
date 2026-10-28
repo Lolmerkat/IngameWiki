@@ -1,20 +1,12 @@
 package dev.jan.ingamewiki.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonParseException;
-import dev.jan.ingamewiki.IngameWiki;
-import java.io.IOException;
+import dev.jan.qollib.config.JsonConfig;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
 /**
  * Settings stored in {@code config/ingamewiki.json}.
  */
-public final class ModConfig {
-	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+public final class ModConfig implements JsonConfig {
 	public static final String DEFAULT_WIKI_URL = "https://minecraft.wiki";
 	public static final String DEFAULT_HOME_PAGE = "Minecraft Wiki";
 
@@ -54,23 +46,7 @@ public final class ModConfig {
 	 */
 	public boolean confirmExternalLinks = true;
 
-	public static ModConfig load(Path file) {
-		ModConfig config = null;
-		if (Files.exists(file)) {
-			try {
-				config = GSON.fromJson(Files.readString(file), ModConfig.class);
-			} catch (IOException | JsonParseException e) {
-				IngameWiki.LOGGER.warn("Could not read {}, using defaults", file, e);
-			}
-		}
-		if (config == null) {
-			config = new ModConfig();
-		}
-		config.sanitize();
-		config.save(file);
-		return config;
-	}
-
+	@Override
 	public void sanitize() {
 		if (mode == null) {
 			mode = OpenMode.INGAME;
@@ -104,16 +80,5 @@ public final class ModConfig {
 			return DEFAULT_WIKI_URL;
 		}
 		return result;
-	}
-
-	public void save(Path file) {
-		try {
-			Files.createDirectories(file.getParent());
-			Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
-			Files.writeString(tmp, GSON.toJson(this));
-			Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-		} catch (IOException e) {
-			IngameWiki.LOGGER.warn("Could not save {}", file, e);
-		}
 	}
 }

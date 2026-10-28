@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	alias(libs.plugins.loom)
 }
 
 base {
@@ -33,17 +33,33 @@ loom {
 	}
 }
 
+// In-game test: ./gradlew runClientGameTest starts the client, changes a setting in the config screen and looks up an
+// inventory item on the wiki (needs internet). Screenshots go to build/run/clientGameTest/screenshots.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "ingamewiki-gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	minecraft libs.minecraft
+	implementation libs.fabric.loader
+	implementation libs.fabric.api
+
+	// Shared library, bundled into the mod jar (Fabric Loader picks the newest copy if several mods bundle it).
+	implementation libs.qollib
+	include libs.qollib
 
 	// HTML parser for the in-game renderer, bundled into the mod jar.
 	include(implementation("org.jsoup:jsoup:${project.jsoup_version}"))
 
 	// Optional: adds a config button to the Mod Menu mod list.
-	compileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") { transitive = false }
-	localRuntime("com.terraformersmc:modmenu:${project.modmenu_version}") { transitive = false }
+	compileOnly(libs.modmenu) { transitive = false }
+	localRuntime(libs.modmenu) { transitive = false }
 
 	// Optional: MCEF Modern provides the embedded Chromium browser for the "MCEF" open mode.
 	compileOnly("maven.modrinth:mcef-modern:${project.mcef_modern_version}") { transitive = false }
@@ -54,9 +70,9 @@ dependencies {
 		localRuntime("maven.modrinth:mcef-modern:${project.mcef_modern_version}") { transitive = false }
 	}
 
-	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
-	testImplementation "org.junit.jupiter:junit-jupiter"
-	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+	testImplementation platform(libs.junit.bom)
+	testImplementation libs.junit.jupiter
+	testRuntimeOnly libs.junit.launcher
 }
 
 processResources {

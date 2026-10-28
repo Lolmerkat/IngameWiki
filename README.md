@@ -58,4 +58,11 @@ shown), navigation boxes and anything that needs JavaScript.
 `./gradlew runClient -Pmcef` adds MCEF Modern to the dev client (it downloads about 500 MB of Chromium into
 `run/config/mcef-modern` on first start).
 
+QOLLib, the library shared by the QOLMods, is built from source: it must be checked out next to this mod
+(`../QOLLib`, as in the `QOLMods` superproject), or point `-Pqollib.dir=<path>` at it. It also holds the Minecraft and
+Fabric versions (`gradle/libs.versions.toml`). The mod jar bundles it, so players do not need to install it.
+
+`./gradlew runClientGameTest` starts the game, changes a setting and looks up an inventory item on the wiki (needs
+internet), saving screenshots to `build/run/clientGameTest/screenshots`.
+
 This mod uses the public MediaWiki API of minecraft.wiki and is not affiliated with the Minecraft Wiki or Mojang.

@@ -9,4 +9,18 @@ pluginManagement {
 	}
 }
 
+// QOLLib, the shared library, is built from source next to this mod (QOLMods/QOLLib) and its version catalog
+// (gradle/libs.versions.toml) holds the Minecraft, Fabric and library versions of all QOLMods.
+// Point -Pqollib.dir=<path> elsewhere if the mod is checked out on its own, e.g. in CI.
+def qollibDir = settingsDir.toPath().resolve(providers.gradleProperty('qollib.dir').getOrElse('../QOLLib')).toFile()
+includeBuild(qollibDir)
+
+dependencyResolutionManagement {
+	versionCatalogs {
+		libs {
+			from(files(new File(qollibDir, 'gradle/libs.versions.toml')))
+		}
+	}
+}
+
 rootProject.name = 'ingamewiki'

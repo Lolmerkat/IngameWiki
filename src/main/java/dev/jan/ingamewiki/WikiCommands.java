@@ -7,6 +7,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.jan.ingamewiki.config.OpenMode;
+import dev.jan.qollib.ClientTasks;
 import dev.jan.ingamewiki.wiki.WikiRequest;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.commands.CommandBuildContext;
@@ -23,12 +24,12 @@ final class WikiCommands {
 		dispatcher.register(literal("wiki")
 				.executes(ctx -> {
 					// The chat screen closes after the command ran, so open the wiki on the next tick.
-					IngameWiki.runNextTick(() -> WikiOpener.open(WikiOpener.home(), null));
+					ClientTasks.nextTick(() -> WikiOpener.open(WikiOpener.home(), null));
 					return 1;
 				})
 				.then(argument("page", StringArgumentType.greedyString()).executes(ctx -> {
 					String page = StringArgumentType.getString(ctx, "page");
-					IngameWiki.runNextTick(() -> WikiOpener.open(new WikiRequest.Lookup(page), null));
+					ClientTasks.nextTick(() -> WikiOpener.open(new WikiRequest.Lookup(page), null));
 					return 1;
 				})));
 

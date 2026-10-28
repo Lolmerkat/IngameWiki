@@ -6,6 +6,7 @@ import dev.jan.ingamewiki.config.WikiData;
 import dev.jan.ingamewiki.mcef.McefSupport;
 import dev.jan.ingamewiki.ui.WikiScreen;
 import dev.jan.ingamewiki.wiki.WikiRequest;
+import dev.jan.qollib.ClientMessages;
 import java.net.URI;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -85,13 +86,13 @@ public final class WikiOpener {
 			case BROWSER -> {
 				URI uri = request.webUrl(IngameWiki.client().links());
 				Blaze3D.openUri(uri);
-				notify(Component.translatable("ingamewiki.opened.browser", request.label()));
+				ClientMessages.overlay(Component.translatable("ingamewiki.opened.browser", request.label()));
 			}
 			case MCEF -> {
 				if (McefSupport.installed()) {
 					McefSupport.open(parent, request.webUrl(IngameWiki.client().links()));
 				} else {
-					notify(Component.translatable("ingamewiki.mcef.missing").withStyle(ChatFormatting.YELLOW));
+					ClientMessages.overlay(Component.translatable("ingamewiki.mcef.missing").withStyle(ChatFormatting.YELLOW));
 					minecraft.gui.setScreen(new WikiScreen(parent, request));
 				}
 			}
@@ -106,13 +107,6 @@ public final class WikiOpener {
 			ConfirmLinkScreen.confirmLinkNow(current, uri);
 		} else {
 			Blaze3D.openUri(uri);
-		}
-	}
-
-	public static void notify(Component message) {
-		Minecraft minecraft = Minecraft.getInstance();
-		if (minecraft.player != null) {
-			minecraft.player.sendOverlayMessage(message);
 		}
 	}
 }

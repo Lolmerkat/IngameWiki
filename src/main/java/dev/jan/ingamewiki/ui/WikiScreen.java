@@ -9,7 +9,8 @@ import dev.jan.ingamewiki.config.WikiData;
 import dev.jan.ingamewiki.mcef.McefSupport;
 import dev.jan.ingamewiki.render.FindInPage;
 import dev.jan.ingamewiki.render.HtmlLayout;
-import dev.jan.ingamewiki.render.ImageCache;
+import dev.jan.qollib.http.Futures;
+import dev.jan.qollib.texture.RemoteTextureCache;
 import dev.jan.ingamewiki.render.ImplicitLinks;
 import dev.jan.ingamewiki.render.LayoutOptions;
 import dev.jan.ingamewiki.render.Link;
@@ -430,7 +431,7 @@ public final class WikiScreen extends Screen {
 				return;
 			}
 			if (error != null) {
-				Throwable cause = WikiClient.unwrap(error);
+				Throwable cause = Futures.unwrap(error);
 				IngameWiki.LOGGER.warn("Loading {} failed", entry.request, cause);
 				message = Component.translatable("ingamewiki.error", entry.request.label())
 						.append("\n").append(cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage())
@@ -475,17 +476,17 @@ public final class WikiScreen extends Screen {
 		return switch (request) {
 			case WikiRequest.Page p -> client.page(p.title())
 					.thenApply(result -> article(result, links))
-					.exceptionallyCompose(error -> WikiClient.unwrap(error) instanceof WikiException.Missing
+					.exceptionallyCompose(error -> Futures.unwrap(error) instanceof WikiException.Missing
 							? client.search(p.title(), 20).thenApply(results -> searchPage(results, p.title(), links))
 							: CompletableFuture.failedFuture(error));
 			case WikiRequest.Lookup l -> client.lookup(l.query())
 					.thenApply(result -> article(result, links))
-					.exceptionallyCompose(error -> WikiClient.unwrap(error) instanceof WikiException.Missing
+					.exceptionallyCompose(error -> Futures.unwrap(error) instanceof WikiException.Missing
 							? client.search(l.query(), 20).thenApply(results -> searchPage(results, l.query(), links))
 							: CompletableFuture.failedFuture(error));
 			case WikiRequest.Go g -> client.page(g.query())
 					.thenApply(result -> article(result, links))
-					.exceptionallyCompose(error -> WikiClient.unwrap(error) instanceof WikiException.Missing
+					.exceptionallyCompose(error -> Futures.unwrap(error) instanceof WikiException.Missing
 							? client.search(g.query(), 20).thenApply(results -> searchPage(results, g.query(), links))
 							: CompletableFuture.failedFuture(error));
 			case WikiRequest.Search s -> client.search(s.query(), 20).thenApply(results -> searchPage(results, null, links));
@@ -838,7 +839,7 @@ public final class WikiScreen extends Screen {
 	private void drawPieces(GuiGraphicsExtractor graphics, int top, int bottom) {
 		int ox = originX();
 		int oy = originY();
-		ImageCache images = IngameWiki.images();
+		RemoteTextureCache<URI> images = IngameWiki.images();
 		graphics.pose().pushMatrix();
 		graphics.pose().translate(ox, oy);
 		graphics.pose().scale(zoom, zoom);
@@ -869,7 +870,7 @@ public final class WikiScreen extends Screen {
 					}
 				}
 				case Piece.Image i -> {
-					ImageCache.Texture texture = images.get(i.src());
+					RemoteTextureCache.Texture texture = images.get(i.src());
 					if (texture != null) {
 						graphics.blit(RenderPipelines.GUI_TEXTURED, texture.id(), i.x(), i.y(), 0.0F, 0.0F, i.width(), i.height(),
 								texture.width(), texture.height(), texture.width(), texture.height());
