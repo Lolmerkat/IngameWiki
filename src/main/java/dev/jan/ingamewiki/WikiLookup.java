@@ -4,6 +4,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.ClientLanguage;
 import net.minecraft.locale.Language;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -50,6 +51,13 @@ public final class WikiLookup {
 
 	public static String itemName(ItemStack stack) {
 		return english(stack.getItem().getDescriptionId());
+	}
+
+	/**
+	 * The name of a fluid such as {@code minecraft:water}, taken from its block's translation.
+	 */
+	public static String fluidName(Identifier fluid) {
+		return english("block." + fluid.getNamespace() + "." + fluid.getPath());
 	}
 
 	/**

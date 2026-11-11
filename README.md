@@ -11,7 +11,9 @@ the game. Pages can be shown three ways; you can switch between them at any time
 
 ## Opening pages
 - **H** (rebindable, "Look Up in Wiki"): opens the page for the block or entity under the crosshair, or for the
-  hovered item in any inventory screen. If nothing is targeted, the main page opens.
+  hovered item in any inventory screen. If nothing is targeted, the main page opens. With
+  [Roughly Enough Items](https://modrinth.com/mod/rei) installed, it also looks up the item or fluid under the mouse in
+  REI's item list, favorites and recipe screens; closing the wiki returns to that screen.
 - **/wiki** opens the main page; **/wiki &lt;name&gt;** opens that page, or the best search match.
 - "Open Wiki" key (unbound by default): reopens the wiki where you last closed it (in-game, with its back/forward
   history and scroll position), or the main page the first time. The last page is remembered across restarts.
@@ -56,7 +58,8 @@ shown), navigation boxes and anything that needs JavaScript.
 ## Building
 `./gradlew build` (tests: `./gradlew test`, dev client: `./gradlew runClient`). Requires Java 25.
 `./gradlew runClient -Pmcef` adds MCEF Modern to the dev client (it downloads about 500 MB of Chromium into
-`run/config/mcef-modern` on first start).
+`run/config/mcef-modern` on first start). `./gradlew runClient -Prei` adds Roughly Enough Items (with Architectury and
+Cloth Config) to the dev client.
 
 QOLLib, the library shared by the QOLMods, is built from source: it must be checked out next to this mod
 (`../QOLLib`, as in the `QOLMods` superproject), or point `-Pqollib.dir=<path>` at it. It also holds the Minecraft and

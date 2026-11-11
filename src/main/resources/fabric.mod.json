@@ -24,6 +24,7 @@
 	},
 	"suggests": {
 		"modmenu": "*",
-		"mcef-modern": "*"
+		"mcef-modern": "*",
+		"roughlyenoughitems": "*"
 	}
 }

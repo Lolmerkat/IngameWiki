@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.jan.ingamewiki.config.ModConfig;
 import dev.jan.ingamewiki.config.OpenMode;
 import dev.jan.ingamewiki.config.WikiData;
+import dev.jan.ingamewiki.rei.ReiSupport;
 import dev.jan.ingamewiki.wiki.WikiClient;
 import dev.jan.ingamewiki.wiki.WikiLinks;
 import dev.jan.ingamewiki.wiki.WikiRequest;
@@ -54,6 +55,7 @@ public final class IngameWiki implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(IngameWiki::tick);
 		ContainerScreens.onSlotKey(lookupKey, (screen, slot) ->
 				WikiOpener.open(new WikiRequest.Lookup(WikiLookup.itemName(slot.getItem())), screen));
+		ReiSupport.register(lookupKey);
 		ClientCommandRegistrationCallback.EVENT.register(WikiCommands::register);
 	}
 

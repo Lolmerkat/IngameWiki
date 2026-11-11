@@ -12,6 +12,14 @@ repositories {
 		name = 'TerraformersMC'
 		url = 'https://maven.terraformersmc.com/releases/'
 	}
+	maven {
+		name = 'Shedaniel'
+		url = 'https://maven.shedaniel.me/'
+		content {
+			includeGroup 'me.shedaniel'
+			includeGroup 'me.shedaniel.cloth'
+		}
+	}
 	exclusiveContent {
 		forRepository {
 			maven {
@@ -68,6 +76,16 @@ dependencies {
 	// ./gradlew runClient -Pmcef
 	if (project.hasProperty('mcef')) {
 		localRuntime("maven.modrinth:mcef-modern:${project.mcef_modern_version}") { transitive = false }
+	}
+
+	// Optional: Roughly Enough Items, so the lookup key also works on entries in REI's item list and recipe screens.
+	compileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:${project.rei_version}") { transitive = false }
+	compileOnly("me.shedaniel.cloth:basic-math:${project.basic_math_version}") { transitive = false }
+	// REI changes the inventory screens, so it is only added to the dev client on request: ./gradlew runClient -Prei
+	if (project.hasProperty('rei')) {
+		localRuntime("maven.modrinth:rei:${project.rei_version}+fabric") { transitive = false }
+		localRuntime("maven.modrinth:architectury-api:${project.architectury_version}") { transitive = false }
+		localRuntime("maven.modrinth:cloth-config:${project.cloth_config_version}") { transitive = false }
 	}
 
 	testImplementation platform(libs.junit.bom)
